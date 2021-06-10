@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<body>
+  <!-- <canvas id="mirror" width="1280" height="720"></canvas> -->
+  <script src="node_modules/gpu.js/dist/gpu-browser.js"></script>
+  <script>
+    const gpu = new GPU();
+    const width = 1280 / 4;
+    const height = 720 / 4;
+
+    (async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video : {
+          width: width,
+          height: height,
+        }
+      });
+
+      const video = document.createElement('video')
+      video.srcObject = stream
+      const play = () => video.play()
+      video.addEventListener('loadedmetadata', play)
+      document.body.addEventListener('click', play)
+      document.body.addEventListener('touchup', play)
+      document.body.addEventListener('keyup', play)
+
+      // const canvas = document.querySelector('#mirror')
+      const canvas = document.createElement('canvas')
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d')
+
+      const kernel = gpu.createKernel(function(frame) {
+        let value = 0
+        let pixel = [0,0,0,0]
+        // const c = Math.floor((pixel[1] * 100) / 32) / 100 * 32
+        for (const j = -2; j <= 2; j++) {
+          for (const i = -2; i <= 2; i++) {
+            let x = Math.abs(this.thread.x + i);
+            if (x >= 1280) x = 1279 - (x - 1279);
+
+            let y =  Math.abs(this.thread.y + j);
+            if (y >= 720) x = 719 - (x - 719);
+
+            pixel = frame[y][x];
+            value += pixel[1];
+          }
+        }
+
+        // TODO normalize color
+        const c = Math.round(value / 25 * 100 / 32) / 100 * 32  
+        this.color(c, c, c, 1)
+      })
+      .setGraphical(true)
+      .setOutput([width, height])
+      // .setDebug(true)
+      
+      const render = async function () {
+        ctx.drawImage(video, 0, 0)
+        kernel(canvas)
+
+        requestAnimationFrame(render)
+        // setTimeout(render, 33)
+      }
+    
+      requestAnimationFrame(render)
+      document.body.appendChild(kernel.canvas)
+    })()
+  
+  </script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "name": "space-resection",
+  "version": "0.0.1",
+  "description": "Space resection after Grunert 1841",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/martinpucala/space-resection.git"
+  },
+  "keywords": [
+    "space",
+    "resection",
+    "grunert"
+  ],
+  "author": "Martin Púčala <martin.pucala@gmail.com>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/martinpucala/space-resection/issues"
+  },
+  "homepage": "https://github.com/martinpucala/space-resection#readme",
+  "dependencies": {
+    "@skymaker/quartic": "^0.1.5",
+    "gl-matrix": "^3.3.0",
+    "gpu.js": "^2.11.3"
+  }
+}
