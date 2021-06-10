@@ -4,7 +4,9 @@ TODO
 - dat si napevno nejake body do priestoru a pocitat P3P podla ich priemetu
 - pridat otacanie a pohyb v priestore
 - pri kazdom pohybe vypocitat presnu polohu podla ovladania a P3P polohu vypocitanu z priemetov
-- 
+
+- use one canvas
+- refactor
 
 */
 
