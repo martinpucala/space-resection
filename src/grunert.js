@@ -2,6 +2,9 @@ import quartic from '@skymaker/quartic'
 import { mat3, vec3 } from 'gl-matrix'
 
 
+// for DLT - needs to be added, but DLT has many more variables...
+// import regression from 'regression'
+
 
 // TODO: DLT - Mp = 0 a mam celu projekcnu maticu P, osobitne K.R,X0 ma nezaujimaju => nepotrebujem SVD?
 // co ked mam viacero sestic? vypocitam viacero P a skusam, ktora ma najmenej outlierov, tzn. najmenej bodov vzdialenych od svojej pozorovanej polohy a tou mozem zobrazit body, ktore chcem zobrazovat?
@@ -21,6 +24,8 @@ console.log(`${K[0]} ${K[3]} ${K[6]}`)
 console.log(`${K[1]} ${K[4]} ${K[7]}`)
 console.log(`${K[2]} ${K[5]} ${K[8]}`)
 
+const f = K[0]
+
 const K_inv = mat3.invert(mat3.create(), K)
 console.log('K_inv')
 console.log(`${K_inv[0]} ${K_inv[3]} ${K_inv[6]}`)
@@ -28,19 +33,21 @@ console.log(`${K_inv[1]} ${K_inv[4]} ${K_inv[7]}`)
 console.log(`${K_inv[2]} ${K_inv[5]} ${K_inv[8]}`)
 
 // 3D object points coordinates
-const [X1, X2, X3, X4] = [
+const [X1, X2, X3, X4, X5] = [
   vec3.fromValues(0, 0, -10),
   vec3.fromValues(0, 2, -10),
   vec3.fromValues(2, 0, -10),
   vec3.fromValues(2, 2, -10),
+  vec3.fromValues(-2, 2, -10),
 ]
 
 // 2D image points coordinates
-const [x1, x2, x3, x4] = [
+const [x1, x2, x3, x4, x5] = [
   vec3.fromValues(640, 360, 1),
   vec3.fromValues(640, 0, 1),
   vec3.fromValues(1280, 360, 1),
   vec3.fromValues(1280, 0, 1),
+  vec3.fromValues(0, 0, 1),
 ]
 
 export function solveP3P_Grunert(X1, X2, X3, x1, x2, x3, K_inv) {
@@ -50,7 +57,7 @@ export function solveP3P_Grunert(X1, X2, X3, x1, x2, x3, K_inv) {
     vec3.transformMat3(vec3.create(), x2, K_inv),
     vec3.transformMat3(vec3.create(), x3, K_inv),
   ]
-  console.log('xi', [x1,x2,x3])//.map(x => vec3.scale(vec3.create(), x, 1/x[3])))
+  // console.log('xi', [x1,x2,x3])//.map(x => vec3.scale(vec3.create(), x, 1/x[3])))
   console.log('cxi', [cx1,cx2,cx3])//.map(x => vec3.scale(vec3.create(), x, 1/x[3])))
     
   const [ray1, ray2, ray3] = [
@@ -58,7 +65,7 @@ export function solveP3P_Grunert(X1, X2, X3, x1, x2, x3, K_inv) {
     vec3.normalize(vec3.create(), cx2),
     vec3.normalize(vec3.create(), cx3),
   ]
-  console.log('rays', [ray1, ray2, ray3])
+  // console.log('rays', [ray1, ray2, ray3])
 
   const [a, b, c] = [
     vec3.dist(X2, X3), 
@@ -71,7 +78,7 @@ export function solveP3P_Grunert(X1, X2, X3, x1, x2, x3, K_inv) {
     vec3.angle(ray1, ray3),
     vec3.angle(ray1, ray2),
   ]
-  console.log('angles', [alpha, beta, gamma])
+  // console.log('angles', [alpha, beta, gamma])
 
   const [cosAlpha, cosBeta, cosGamma] = [
     Math.cos(alpha),
@@ -98,7 +105,7 @@ export function solveP3P_Grunert(X1, X2, X3, x1, x2, x3, K_inv) {
 
   const results = []
 
-  console.log(`vs=${vs}`)
+  // console.log(`vs=${vs}`)
   if (vs.length === 0) {
     console.log('no real solutions')
   }
@@ -106,15 +113,15 @@ export function solveP3P_Grunert(X1, X2, X3, x1, x2, x3, K_inv) {
   vs.forEach(v => {
     const u = ((-1 * (a**2 - c**2) / b**2) * v**2 - 2 * ((a**2 - c**2) / b**2) * cosBeta * v + 1 + (a**2 - c**2) / b**2) / (2 * cosGamma - v * cosAlpha)
     
-    console.log(`--- u=${u} v=${v}`)
-    console.log(`a=${a} b=${b} c=${c} cosAlpha=${cosAlpha} cosBeta=${cosBeta} cosGamma=${cosGamma}`)
+    // console.log(`--- u=${u} v=${v}`)
+    // console.log(`a=${a} b=${b} c=${c} cosAlpha=${cosAlpha} cosBeta=${cosBeta} cosGamma=${cosGamma}`)
     
     // const s1 = Math.sqrt(a**2 / (u**2 + v**2 - 2*u*v*cosAlpha))
     const s1 = Math.sqrt(b**2 / (1 + v**2 - 2*v*cosBeta))
     const s2 = Math.abs(u * s1)
     const s3 = Math.abs(v * s1)
   
-    console.log(`u=${u} v=${v} -> s1=${s1} s2=${s2} s3=${s3}`)
+    // console.log(`u=${u} v=${v} -> s1=${s1} s2=${s2} s3=${s3}`)
 
     const [X01, X02, X03] = [
       vec3.scaleAndAdd(vec3.create(), X1, ray1, s1),
@@ -124,7 +131,7 @@ export function solveP3P_Grunert(X1, X2, X3, x1, x2, x3, K_inv) {
 
     results.push(X01, X02, X03)
 
-    console.log('\nSolutions:', X01, X02, X03)
+    // console.log('\nSolutions:', X01, X02, X03)
     // console.log(ray1,ray2, ray3, s1, s2 ,s3)
   })
 
@@ -134,18 +141,19 @@ export function solveP3P_Grunert(X1, X2, X3, x1, x2, x3, K_inv) {
 
 
 
-const X0s1 = solveP3P_Grunert(X1, X2, X3, x1, x2, x3, K_inv)
-const X0s2 = solveP3P_Grunert(X1, X2, X4, x1, x2, x4, K_inv)
-
-const X0s = [...X0s1, ...X0s2]
+const X0s = [
+  ...solveP3P_Grunert(X1, X2, X3, x1, x2, x3, K_inv),
+  ...solveP3P_Grunert(X1, X2, x5, x1, x2, x4, K_inv),
+  ...solveP3P_Grunert(X4, X2, X5, x4, x2, x5, K_inv),
+]
 // console.log('!!! zapocitat ohniskovu vzdialenost kamery !!!')
 
-console.log()
-console.log()
-console.log('X_i', [X1,X2,X3,X4])//.map(x => vec3.scale(vec3.create(), x, 1/x[3])))
-console.log('x_i', [x1,x2,x3,x4])//.map(x => vec3.scale(vec3.create(), x, 1/x[3])))
-// console.log([cx1,cx2,cx2])//.map(x => vec3.scale(vec3.create(), x, 1/x[3])))
-console.log('X0i', X0s.sort())//.map(x => vec3.scale(vec3.create(), x, 1/x[3])))
+// console.log()
+// console.log()
+// console.log('X_i', [X1,X2,X3,X4, X5])//.map(x => vec3.scale(vec3.create(), x, 1/x[3])))
+// console.log('x_i', [x1,x2,x3,x4, x5])//.map(x => vec3.scale(vec3.create(), x, 1/x[3])))
+// // console.log([cx1,cx2,cx2])//.map(x => vec3.scale(vec3.create(), x, 1/x[3])))
+// console.log('X0i', X0s.sort())//.map(x => vec3.scale(vec3.create(), x, 1/x[3])))
 
 
 // group sorted origin candidates
@@ -179,6 +187,52 @@ vec3.scale(result, result, 1/results.length)
 console.log(`FINAL RESULT: ${result}`)
 
 
+//----------------- end of Grunert
+
+
+
+
+
+// const t = vec3.scale(result, -1)
+
+console.log()
+
+// rotation matrix R calculation from:
+// https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
+
+
+function calculateRotationMatrix(from, to) {
+  // from and to are unit vectors, from is to be rotated to to
+  const v = vec3.cross(vec3.create(), a, b)
+  const cosine = vec3.dot(from, to) // cosine
+  const I = mat3.identity(mat3.create())
+
+  let vx = mat3.fromValues(
+    0, -v[2], v[1],
+    v[2], 0, -v[0],
+    -v[1], v[0], 0
+  )
+  vx = mat3.transpose(mat3.create(), vx)
+  const vx2 = mat3.multiply(mat3.create(), vx, vx)
+
+  let R = mat3.add(mat3.create(), I, vx)
+  R = mat3.add(mat3.create(), R, mat3.multiplyScalar(mat3.create(), vx2, 1 / (1 + cosine))) // TODO: c == -1 => rotate by pi
+  return R
+}
+
+const a = vec3.fromValues(1, 0, 0)
+const b = vec3.fromValues(0, 1, 0)
+const R = calculateRotationMatrix(a, b)
+
+console.log('R')
+console.log(`${R[0]} ${R[3]} ${R[6]}`)
+console.log(`${R[1]} ${R[4]} ${R[7]}`)
+console.log(`${R[2]} ${R[5]} ${R[8]}`)
+
+console.log(a)
+console.log(vec3.transformMat3(vec3.create(), a, R))
+
+
 /*
 
 TODO
@@ -198,3 +252,7 @@ TODO
 //   -0.007745497656725853,
 //   0.11519181871308336
 // ]
+
+
+// const test = regression.linear([[1, 0, 1], [1, 1, 2]])
+// console.log(test)

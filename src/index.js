@@ -38,12 +38,16 @@ function main() {
   const far = 100;
   const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
   camera.position.set(0, 0, 0);
+  const camera2 = new THREE.PerspectiveCamera(fov, aspect, near, far);
+  camera2.position.set(0, 0, 0);
 
   const controls = new OrbitControls(camera, canvas);
   controls.target.set(0, 5, 0);
   controls.update();
 
   const scene = new THREE.Scene();
+  const scene2 = new THREE.Scene();
+
   // scene.background = new THREE.Color('black');
 
   // {
@@ -93,7 +97,8 @@ function main() {
     const geometry = new THREE.WireframeGeometry(new THREE.BoxGeometry(1, 1, 1))
     const mesh = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: 0xff0000 }));
     mesh.position.z = 3;
-    scene.add(mesh);
+
+    scene2.add(mesh);
     scene.add(referenceCube);
 
     // mesh.applyMatrix4(new THREE.Matrix4().set(
@@ -131,6 +136,7 @@ function main() {
     console.log(box, boxCenter)
 
     frameArea(boxSize * 0.5, boxSize, boxCenter, camera);
+    frameArea(boxSize * 0.5, boxSize, boxCenter, camera2);
 
     // update the Trackball controls to handle the new size
     controls.maxDistance = boxSize * 10;
@@ -141,13 +147,13 @@ function main() {
   function frameArea(sizeToFitOnScreen, boxSize, boxCenter, camera) {
     const halfSizeToFitOnScreen = sizeToFitOnScreen * 0.5;
     const halfFovY = THREE.MathUtils.degToRad(camera.fov * .5);
-    const distance = halfSizeToFitOnScreen / Math.tan(halfFovY);
+    // const distance = halfSizeToFitOnScreen / Math.tan(halfFovY);
     // compute a unit vector that points in the direction the camera is now
     // in the xz plane from the center of the box
-    const direction = (new THREE.Vector3())
-        .subVectors(camera.position, boxCenter)
-        .multiply(new THREE.Vector3(1, 0, 1))
-        .normalize();
+    // const direction = (new THREE.Vector3())
+    //     .subVectors(camera.position, boxCenter)
+    //     .multiply(new THREE.Vector3(1, 0, 1))
+    //     .normalize();
 
     // move the camera to a position distance units way from the center
     // in whatever direction the camera was from the center already
@@ -159,6 +165,7 @@ function main() {
     camera.far = boxSize * 100;
 
     camera.updateProjectionMatrix();
+    console.log('projection matrix:', camera.projectionMatrix.elements)
 
     // point the camera to look at the center of the box
     camera.lookAt(boxCenter.x, boxCenter.y, boxCenter.z);
@@ -200,13 +207,13 @@ function main() {
     return needResize;
   }
 
-  function render(time) {
-    time *= 0.001;  // convert to seconds
-
+  function render() {
     if (resizeRendererToDisplaySize(renderer)) {
       const canvas = renderer.domElement;
       camera.aspect = canvas.clientWidth / canvas.clientHeight;
       camera.updateProjectionMatrix();
+      // camera2.aspect = canvas.clientWidth / canvas.clientHeight;
+      // camera2.updateProjectionMatrix();
     }
 
     // if (cars) {
@@ -214,11 +221,20 @@ function main() {
     //     car.rotation.y = time;
     //   }
     // }
-
     renderer.render(scene, camera);
+    camera2.projectionMatrix.set( // matrix column one after another
+      1, 0, 0, 0,
+      0, camera.aspect, 0, 0,
+      0, 0,  -1, 0,
+      0, 0,  -2, 0,
+    )
+    renderer.autoClear = false;
+    renderer.render(scene2, camera2);
 
     requestAnimationFrame(render);
   }
+  window.camera = camera
+  window.camera2 = camera2
 
   requestAnimationFrame(render);
 }
@@ -299,7 +315,7 @@ const gpu = new GPU();
     // setTimeout(render, 33)
   }
 
-  requestAnimationFrame(render)
+  // requestAnimationFrame(render)
   document.body.appendChild(kernel.canvas)
 })()
 
