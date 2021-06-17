@@ -14,6 +14,8 @@ function transposed(M) {
   return M_T
 }
 
+// TODO: robit z 2 poli v parametre a plnit rovno transponovanu maticu, aby sa usetrilo kopirovanie
+//(plus vyrobit rovno cielove rozmery
 export function DLT(X1, X2, X3, X4, X5, X6, x1, x2, x3, x4, x5, x6) {
   const M = [
     [X1[0], X1[1], X1[2], 1, 0, 0, 0, 0, -x1[0] * X1[0], -x1[0] * X1[1], -x1[0] * X1[2], -x1[0]],
@@ -31,21 +33,14 @@ export function DLT(X1, X2, X3, X4, X5, X6, x1, x2, x3, x4, x5, x6) {
   ]
   const M_T = transposed(M)
   
-  // console.log('M', M.map(x => x.join(', ')))
-  // console.log('M_T', M_T.map(x => x.join(', ')))
-
   // for some reason it seems u and v are switched(?)
   const { u, q } = SVD(M_T, true, false)
-  // console.log(u, q, v)
-  // console.log(u.map(u => u.join(', ')))
 
   const minQ = Math.min(...q) // q's are non-negative
   const index = q.lastIndexOf(minQ)
 
-  // const h = v[index]
   const h = u.map(u => u[index])
-console.log('q', q)
-console.log('h', h)
+
   // tz < 0? => flip
   if (h[11] < 0) {
     h.forEach((_, i) => h[i] *= -1)
@@ -80,61 +75,58 @@ console.log('h', h)
 //   [-80, -80, 1],
 // ]
 
-const true_P = new THREE.Matrix4().set(
-  0.7072945483755065, -0.7061704379962989, 0.03252282795827704, -0.1,
-  0.7061704379962989, 0.7036809008245869, -0.07846338199958876, 0.1,
-  0.03252282795827704, 0.07846338199958876, 0.9963863524490802, 1.2,
-  0, 0, 0, 1,
-)
+              // const true_P = new THREE.Matrix4().set(
+              //   0.7072945483755065, -0.7061704379962989, 0.03252282795827704, -0.1,
+              //   0.7061704379962989, 0.7036809008245869, -0.07846338199958876, 0.1,
+              //   0.03252282795827704, 0.07846338199958876, 0.9963863524490802, 1.2,
+              //   0, 0, 0, 1,
+              // )
 
-const L = 0.2
-const X = [
-  [-L, -L, 0, 1],
-  [2*L, -L, 0.2, 1],
-  [L, L, 0.2, 1],
-  [-L, L, 0, 1],
-  [-2*L, L, 0, 1],
-  [0, 0, 0.5, 1],
-]
+              // const L = 0.2
+              // const X = [
+              //   [-L, -L, 0, 1],
+              //   [2*L, -L, 0.2, 1],
+              //   [L, L, 0.2, 1],
+              //   [-L, L, 0, 1],
+              //   [-2*L, L, 0, 1],
+              //   [0, 0, 0.5, 1],
+              // ]
 
-// console.log(new THREE.Vector4(...X[0]).applyMatrix4(true_P).toArray())
-
-const x = X.map(X => new THREE.Vector4(...X)
-  .applyMatrix4(true_P))
-  .map(x => [x.x / x.z, x.y / x.z, 1])
-
-// console.log(x)
-
-console.time('aaaa')
-const result = DLT(...X, ...x)
-// console.log('result', result)
-console.timeEnd('aaaa')
+              // const x = X.map(X => new THREE.Vector4(...X)
+              //   .applyMatrix4(true_P))
+              //   .map(x => [x.x / x.z, x.y / x.z, 1])
 
 
-const P = new THREE.Matrix4().set(
-  ...result,
-  0, 0, 0, 1
-)
+              // console.time('aaaa')
+              // const result = DLT(...X, ...x)
+              // // console.log('result', result)
+              // console.timeEnd('aaaa')
 
-console.log()
-console.log('true_P')
-console.log(`${true_P.elements[0]} ${true_P.elements[4]} ${true_P.elements[8]} ${true_P.elements[12]}`)
-console.log(`${true_P.elements[1]} ${true_P.elements[5]} ${true_P.elements[9]} ${true_P.elements[13]}`)
-console.log(`${true_P.elements[2]} ${true_P.elements[6]} ${true_P.elements[10]} ${true_P.elements[14]}`)
-console.log(`${true_P.elements[3]} ${true_P.elements[7]} ${true_P.elements[11]} ${true_P.elements[15]}`)
-console.log()
-console.log('P')
-console.log(`${P.elements[0]} ${P.elements[4]} ${P.elements[8]} ${P.elements[12]}`)
-console.log(`${P.elements[1]} ${P.elements[5]} ${P.elements[9]} ${P.elements[13]}`)
-console.log(`${P.elements[2]} ${P.elements[6]} ${P.elements[10]} ${P.elements[14]}`)
-console.log(`${P.elements[3]} ${P.elements[7]} ${P.elements[11]} ${P.elements[15]}`)
-console.log()
 
-console.log('X', X)
-console.log('x', x)
-console.log('x_', X.map(X => new THREE.Vector4(...X)
-  .applyMatrix4(P))
-  .map(x => [x.x / x.z, x.y / x.z, 1]))
+              // const P = new THREE.Matrix4().set(
+              //   ...result,
+              //   0, 0, 0, 1
+              // )
+
+              // console.log()
+              // console.log('true_P')
+              // console.log(`${true_P.elements[0]} ${true_P.elements[4]} ${true_P.elements[8]} ${true_P.elements[12]}`)
+              // console.log(`${true_P.elements[1]} ${true_P.elements[5]} ${true_P.elements[9]} ${true_P.elements[13]}`)
+              // console.log(`${true_P.elements[2]} ${true_P.elements[6]} ${true_P.elements[10]} ${true_P.elements[14]}`)
+              // console.log(`${true_P.elements[3]} ${true_P.elements[7]} ${true_P.elements[11]} ${true_P.elements[15]}`)
+              // console.log()
+              // console.log('P')
+              // console.log(`${P.elements[0]} ${P.elements[4]} ${P.elements[8]} ${P.elements[12]}`)
+              // console.log(`${P.elements[1]} ${P.elements[5]} ${P.elements[9]} ${P.elements[13]}`)
+              // console.log(`${P.elements[2]} ${P.elements[6]} ${P.elements[10]} ${P.elements[14]}`)
+              // console.log(`${P.elements[3]} ${P.elements[7]} ${P.elements[11]} ${P.elements[15]}`)
+              // console.log()
+
+              // console.log('X', X)
+              // console.log('x', x)
+              // console.log('x_', X.map(X => new THREE.Vector4(...X)
+              //   .applyMatrix4(P))
+              //   .map(x => [x.x / x.z, x.y / x.z, 1]))
 
 // void X.forEach(X => {
 //   const v = new THREE.Vector4(...X)
