@@ -107,7 +107,9 @@ function main() {
     renderer.autoClear = false;
     renderer.render(scene2, camera);
 
-    setTimeout(render, 33)
+    // setTimeout(render, 33)
+    requestAnimationFrame(render);
+
   }
 
   requestAnimationFrame(render);
@@ -150,52 +152,68 @@ const gpu = new GPU();
 
 
 
+  const grayscaleKernel = gpu.createKernel(function(image) {
+    const pixel = image[this.thread.y][this.thread.x];
+    return 0.2126 * pixel[0] + 0.7152 * pixel[1] + 0.0722 * pixel[2];
+  })
+  .setOutput([width, height])
+  .setImmutable(true)
+  .setPipeline(true)
 
-  const kernel = gpu.createKernel(function(frame) {
+  const gaussianBlurKernel = gpu.createKernel(function(image, imageWidth, imageHeight, radius) {
     let value = 0.0;
-    let pixel = [0,0,0,0];
-    const radius = 7;
-    // const c = Math.floor((pixel[1] * 100) / 32) / 100 * 32
+
     for (let j = -radius; j <= radius; j++) {
       for (let i = -radius; i <= radius; i++) {
         let x = Math.abs(this.thread.x + i);
-        if (x >= 1280) x = 1279 - (x - 1279);
+        if (x >= imageWidth) x = imageWidth - 1 - (x - (imageWidth - 1)); // does this make sense??
 
         let y =  Math.abs(this.thread.y + j);
-        if (y >= 720) y = 719 - (y - 719);
+        if (y >= imageHeight) y = imageHeight - 1 - (y - (imageHeight - 1));
 
-        pixel = frame[y][x];
-        value += pixel[1];
-        // just to slow down the computation
-        // for (const k = 0; k < 200; k++) {
-        //   value += Math.sqrt(k) / 20000;
-        // }
+        value += image[y][x];
       }
     }
 
-    value /= 1.0 * (2.0 * radius + 1.0) * (2.0 * radius + 1.0);
+    return value / Math.pow(2.0 * radius + 1.0, 2.0);
     // TODO normalize color
     // const c = 255.0 * Math.round(value / 25 * 100 / 32) / 100 * 32
     // this.color(c, c, c, 1.0);
-    this.color(value, value, value, 1.0);
-  })
-  .setGraphical(true)
-  .setOutput([width, height])
-  // .setDebug(true)
+    // const c = 255.0 * value;
 
-  
-  
+    // this.color(c / 255.0, c / 255.0, c / 255.0, 1.0);
+  })
+  .setOutput([width, height])
+  .setImmutable(true)
+  .setPipeline(true)
+
+  const drawKernel = gpu.createKernel(function(image) {
+    const i = image[this.thread.y][this.thread.x];
+    this.color(i, i, i, 1.0);
+  })
+  .setOutput([width, height])
+  .setGraphical(true)
+
 
   const render = async function () {
     ctx.drawImage(video, 0, 0)
-    kernel(canvas)
-
-    // requestAnimationFrame(render)
-    setTimeout(render, 33)
+    
+    const blurRadius = 15
+    const grayscaleImage = grayscaleKernel(canvas);
+    const blurredImage1 = gaussianBlurKernel(grayscaleImage, imageWidth, imageHeight, blurRadius)
+    grayscaleImage.delete()
+    const blurredImage2 = gaussianBlurKernel(blurredImage1, imageWidth, imageHeight, blurRadius)
+    blurredImage1.delete()
+    drawKernel(blurredImage2)
+    blurredImage2.delete()
+    
+    requestAnimationFrame(render)
+    // setTimeout(render, 33)
   }
 
   requestAnimationFrame(render)
-  document.body.appendChild(kernel.canvas)
+
+  document.body.appendChild(drawKernel.canvas)
 })()
 
 
