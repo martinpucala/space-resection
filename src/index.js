@@ -120,7 +120,9 @@ function main() {
 
 
 
+// const gpu = new GPU({ mode: 'cpu' });
 const gpu = new GPU();
+
 
 (async () => {
   const stream = await navigator.mediaDevices.getUserMedia({
@@ -150,16 +152,17 @@ const gpu = new GPU();
 
 
   const kernel = gpu.createKernel(function(frame) {
-    let value = 0
-    let pixel = [0,0,0,0]
+    let value = 0.0;
+    let pixel = [0,0,0,0];
+    const radius = 7;
     // const c = Math.floor((pixel[1] * 100) / 32) / 100 * 32
-    for (const j = -2; j <= 2; j++) {
-      for (const i = -2; i <= 2; i++) {
+    for (let j = -radius; j <= radius; j++) {
+      for (let i = -radius; i <= radius; i++) {
         let x = Math.abs(this.thread.x + i);
         if (x >= 1280) x = 1279 - (x - 1279);
 
         let y =  Math.abs(this.thread.y + j);
-        if (y >= 720) x = 719 - (x - 719);
+        if (y >= 720) y = 719 - (y - 719);
 
         pixel = frame[y][x];
         value += pixel[1];
@@ -170,9 +173,11 @@ const gpu = new GPU();
       }
     }
 
+    value /= 1.0 * (2.0 * radius + 1.0) * (2.0 * radius + 1.0);
     // TODO normalize color
-    const c = Math.round(value / 25 * 100 / 32) / 100 * 32  
-    this.color(c, c, c, 1)
+    // const c = 255.0 * Math.round(value / 25 * 100 / 32) / 100 * 32
+    // this.color(c, c, c, 1.0);
+    this.color(value, value, value, 1.0);
   })
   .setGraphical(true)
   .setOutput([width, height])
