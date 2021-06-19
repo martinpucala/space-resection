@@ -1,25 +1,12 @@
-/*
-TODO
-- vykreslit objekt
-- dat si napevno nejake body do priestoru a pocitat P3P podla ich priemetu
-- pridat otacanie a pohyb v priestore
-- pri kazdom pohybe vypocitat presnu polohu podla ovladania a P3P polohu vypocitanu z priemetov
-
-- add dependencies to package.json
-- webpack bundling
-- use one canvas
-- refactor
-*/
-
-
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GPU } from 'gpu.js';
 
 import { DLT } from './dlt.js';
-import { MeshNormalMaterial } from 'three';
 
 
+// const width = 1280 / 4
+// const height = 720 / 4
 const width = 1280
 const height = 720
 
@@ -178,7 +165,7 @@ const gaussian = (function() {
   const FASTPoints = [[3, 0], [3, -1], [2, -2], [1, -3], [0, -3], [-1, -3], [-2, -2], [-3, -1], [-3, 0], [-3, 1], [-2, 2], [-1, 3], [0, 3], [1, 3], [2, 2], [3, 1]];
   const FASTStreakLength = 9;
   const FASTRadius = 3;
-  const FASTThreshold = 2 / 255;
+  const FASTThreshold = 1 / 255;
 
   const grayscaleKernel = gpu.createKernel(function(image) {
     const pixel = image[this.thread.y][this.thread.x];
@@ -244,7 +231,8 @@ const gaussian = (function() {
   const drawKernel = gpu.createKernel(function(image, keypoints) {
     const i = image[this.thread.y][this.thread.x];
     const keypoint = keypoints[this.thread.y][this.thread.x];
-    if (keypoint > 0.00000001) {
+    // FIXME: take N top - how to sort & find them? :o
+    if (keypoint > 0.00001) {
       this.color(1, 0, 0, 1.0);
     } else {
       this.color(i, i, i, 1.0);
@@ -254,7 +242,7 @@ const gaussian = (function() {
   .setGraphical(true)
 
   const fastKeypointsKernel = gpu.createKernel(function(image, imageWidth, imageHeight, points, pointsCount, radius, threshold, FASTStreakLength) {
-    // TODO: 0, 3, 6, 9 quick-test
+    // TODO: 0, 3, 6, 9 quick-test?
 
     if (
       this.thread.x < radius ||
@@ -286,7 +274,7 @@ const gaussian = (function() {
       ip = image[y + dy][x + dx];
       diff = ic - ip;
       sign = Math.sign(diff);
-// debugger
+
       if (Math.abs(diff) < threshold) {
         streak = 0;
       } else if (sign === lastSign) {
@@ -302,7 +290,6 @@ const gaussian = (function() {
     }
 
     return !!result ? 1 : 0;
-    // return diff;
   }, {
     output: [width, height],
     immutable: true,
@@ -320,7 +307,7 @@ const gaussian = (function() {
     pipeline: true,
   })
   
-  const harrisKeypointsKernel = gpu.createKernel(function(keypoints, derivatives, gaussian, radius, kappa, imageWidth, imageHeight) {
+  const filterKeypointsKernel = gpu.createKernel(function(keypoints, derivatives, gaussian, radius, kappa, imageWidth, imageHeight) {
     if (
       keypoints[this.thread.y][this.thread.x] === 0 ||
       this.thread.x < radius ||
@@ -343,6 +330,7 @@ const gaussian = (function() {
         
         let I = derivatives[y][x];
 
+        // Gaussian used instead of box for weights => isotropic response (direction-independent) (https://en.wikipedia.org/wiki/Corner_detection)
         let weight = gaussian[j + radius][i + radius];
         IxIx += weight * Math.pow(I[0], 2);
         IyIy += weight * Math.pow(I[1], 2);
@@ -350,12 +338,25 @@ const gaussian = (function() {
       }
     }
 
-    // detM - (trace(M))^2
-    return IxIx * IyIy - Math.pow(IxIy, 2) - kappa * Math.pow(IxIx + IyIy, 2);
+    // return harrisScore(IxIx, IyIy, IxIy, kappa)
+    return shiTomasi(IxIx, IyIy, IxIy)
   }, {
     output: [width, height],
     immutable: true,
     pipeline: true,
+    functions: [
+      function harrisScore(IxIx, IyIy, IxIy, kappa) {
+        // detM - (trace(M))^2 (https://en.wikipedia.org/wiki/Corner_detection)
+        return IxIx * IyIy - Math.pow(IxIy, 2) - kappa * Math.pow(IxIx + IyIy, 2);
+      },
+      function shiTomasi(IxIx, IyIy, IxIy) {
+        // Eigenvalue algorithm from https://en.wikipedia.org/wiki/Eigenvalue_algorithm
+        let traceA = IxIx + IyIy;
+        let detA = IxIx * IyIy - Math.pow(IxIy, 2);
+        let gap = Math.sqrt(Math.pow(traceA, 2.0) - 4 * detA);
+        return Math.min(traceA + gap, traceA - gap) / 2;
+      }
+    ]
   })
 
 
@@ -372,12 +373,12 @@ const gaussian = (function() {
 
 
   const gaussSigma = 3
-  const gaussColorLevels = 32
+  const gaussColorLevels = 16
   const gaussBlurRadius = 11
   // const boxBlurRadius = 3
   const harrisRadius = 3
   const harrisSigma = 2
-  const harrisKappa = 0.06
+  const harrisKappa = 0.15 // 0.04-0.15
 
   const render = async function () {
     ctx.drawImage(video, 0, 0)
@@ -387,7 +388,7 @@ const gaussian = (function() {
     const keypoints = fastKeypointsKernel(blurredImage1, width, height, FASTPoints, FASTPoints.length, FASTRadius, FASTThreshold, FASTStreakLength);
     const derivatives = partialDerivativesKernel(grayscaleImage);
     grayscaleImage.delete()
-    const harrisKeypoints = harrisKeypointsKernel(keypoints, derivatives, gaussian(harrisRadius, harrisSigma), harrisRadius, harrisKappa, width, height);
+    const filteredKeypoints = filterKeypointsKernel(keypoints, derivatives, gaussian(harrisRadius, harrisSigma), harrisRadius, harrisKappa, width, height);
     derivatives.delete()
     keypoints.delete()
 
@@ -399,9 +400,9 @@ const gaussian = (function() {
     // blurredImage2.delete()
     // drawKernel(grayscaleImage)
     // grayscaleImage.delete()
-    drawKernel(blurredImage1, harrisKeypoints)
+    drawKernel(blurredImage1, filteredKeypoints)
 
-    harrisKeypoints.delete()
+    filteredKeypoints.delete()
     blurredImage1.delete()
     // keypoints.delete()
     // combinedDrawKernel(canvas, gaussian(gaussBlurRadius, gaussSigma), width, height, gaussBlurRadius, gaussColorLevels)
@@ -415,7 +416,6 @@ const gaussian = (function() {
 
   document.body.appendChild(drawKernel.canvas)
 })()
-
 
 
 main();
