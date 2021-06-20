@@ -2,10 +2,12 @@
   "name": "space-resection",
   "version": "0.0.1",
   "description": "Space resection after Grunert 1841",
-  "main": "dist/index.js",
-  "type": "module",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack --mode=development",
+    "watch": "webpack --watch --mode=development",
+    "start": "webpack server --open --mode=development"
   },
   "repository": {
     "type": "git",
@@ -25,6 +27,15 @@
   "dependencies": {
     "@skymaker/quartic": "^0.1.5",
     "gl-matrix": "^3.3.0",
-    "gpu.js": "^2.11.3"
+    "gpu.js": "^2.11.3",
+    "linear-solve": "^1.2.1",
+    "svd-js": "^1.1.1",
+    "three": "^0.129.0",
+    "three-orbit-controls": "^82.1.0"
+  },
+  "devDependencies": {
+    "webpack": "^5.38.1",
+    "webpack-cli": "^4.7.2",
+    "webpack-dev-server": "^3.11.2"
   }
 }
